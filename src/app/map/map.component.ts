@@ -1099,20 +1099,19 @@ export class MapComponent implements OnInit {
   }
 
 
-
   getFeatureInfo(event: L.LeafletMouseEvent) {
     console.log('Fetching feature info...');
-
+ 
     const bbox = this.map.getBounds().toBBoxString();
     const size = this.map.getSize();
     const point = this.map.latLngToContainerPoint(event.latlng);
-
+ 
     // Create the GetFeatureInfo URL with current filters
     const cqlFilter = this.selectedAirwayId ? `airway_id='${this.selectedAirwayId}'` : '';
-    const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=convlinedata&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=convlinedata&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}${cqlFilter ? '&CQL_FILTER=' + encodeURIComponent(cqlFilter) : ''}`;
-
+    const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=convlinedata&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=convlinedata&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}${cqlFilter ? '&CQL_FILTER=' + encodeURIComponent(cqlFilter) : ''}&buffer=20`;
+ 
     console.log('Constructed GetFeatureInfo URL:', url);
-
+ 
     fetch(url)
       .then(response => {
         if (!response.ok) {
@@ -1127,7 +1126,7 @@ export class MapComponent implements OnInit {
           data.features.forEach((feature: { properties: any; }) => {
             const properties = feature.properties;
             console.log('Feature properties:', properties);  // Log properties for each feature
-
+ 
             if (properties) {
               const displayProperties = [
                 'airway_id',
@@ -1154,7 +1153,7 @@ export class MapComponent implements OnInit {
               console.log('No properties found for feature:', feature);
             }
           });
-
+ 
           L.popup()
             .setLatLng(event.latlng)
             .setContent(popupContent)
@@ -1167,20 +1166,20 @@ export class MapComponent implements OnInit {
         console.error('Error fetching feature info:', error);
       });
   }
-
+ 
   getNonConvFeatureInfo(event: L.LeafletMouseEvent) {
     console.log('Fetching feature info...');
-
+ 
     const bbox = this.map.getBounds().toBBoxString();
     const size = this.map.getSize();
     const point = this.map.latLngToContainerPoint(event.latlng);
-
+ 
     // Create the GetFeatureInfo URL with current filters
     const cqlFilter = this.selectedAirwayId ? `airway_id='${this.selectedAirwayId}'` : '';
-    const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=nonconvlinedata&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=nonconvlinedata&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}${cqlFilter ? '&CQL_FILTER=' + encodeURIComponent(cqlFilter) : ''}`;
-
+    const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=nonconvlinedata&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=nonconvlinedata&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}${cqlFilter ? '&CQL_FILTER=' + encodeURIComponent(cqlFilter) : ''}&buffer=20`;
+ 
     console.log('Constructed GetFeatureInfo URL:', url);
-
+ 
     fetch(url)
       .then(response => {
         if (!response.ok) {
@@ -1195,7 +1194,7 @@ export class MapComponent implements OnInit {
           data.features.forEach((feature: { properties: any; }) => {
             const properties = feature.properties;
             console.log('Feature properties:', properties);  // Log properties for each feature
-
+ 
             if (properties) {
               const displayProperties = [
                 'airway_id',
@@ -1222,7 +1221,7 @@ export class MapComponent implements OnInit {
               console.log('No properties found for feature:', feature);
             }
           });
-
+ 
           L.popup()
             .setLatLng(event.latlng)
             .setContent(popupContent)
@@ -1245,7 +1244,7 @@ export class MapComponent implements OnInit {
     const cqlFilter = this.selectFIR ? `id='${this.selectFIR}'` : '';
 
     // Construct the GetFeatureInfo URL
-    const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=FIR&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=FIR&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}&CQL_FILTER=${encodeURIComponent(cqlFilter)}`;
+    const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=India_FIR&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=FIR&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}&CQL_FILTER=${encodeURIComponent(cqlFilter)}`;
 
     fetch(url)
       .then(response => {
@@ -1836,36 +1835,6 @@ export class MapComponent implements OnInit {
         console.warn(`No click handler for layer: ${layerName}`);
     }
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   loadairport(event: Event) {
     this.stopPropagation(event);
     const layerName = 'airportdetails';
