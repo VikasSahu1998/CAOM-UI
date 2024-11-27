@@ -43,7 +43,7 @@ export class MapComponent implements OnInit {
   selectAirport: string = '';
   selectFIR: string = '';
   [key: string]: any; // Allows dynamic properties
-  wmsUrl = 'http://10.98.11.77:8080/geoserver/wms';
+  wmsUrl = 'http://cognitive-casper-dev-alb-1938233015.ap-south-1.elb.amazonaws.com:8080/geoserver/wms';
   private waypointLayer!: L.TileLayer.WMS;
   private nonConvLineDataLayer!: L.TileLayer.WMS;
   private convLineDataLayer!: L.TileLayer.WMS;
