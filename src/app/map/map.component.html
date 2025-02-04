@@ -347,6 +347,13 @@
                                         alt="Airport">
                                 </div>
                             </button>
+                            <button mat-mini-fab class="mycolor" title="Grid Mora"
+                                (click)="loadLayer($event, 'GridMora', '')">
+                                <div class="icon-container">
+                                    <img src="assets/airport.png" title="Grid Mora" style="height: 25px; width: 30px;"
+                                        alt="Airport">
+                                </div>
+                            </button>
 
                         </div>
                     </mat-menu>
@@ -411,6 +418,65 @@
                             </form>
                         </div>
 
+                        <div id="controlAirspaceFilterPopup"
+                            *ngIf="activeLayer === 'controlairspace' && filterPopupVisible" class="filter-popup">
+                            <h3>Control Airspace Data Filter</h3>
+                            <form (submit)="controlAirspaceFilter($event)">
+                                <label for="nameInput">Name:</label>
+                                <input type="text" id="nameInput" placeholder="Enter Name">
+                                <label for="classificationInput">Airspace:</label>
+                                <select class="select-all" id="classificationInput">
+                                    <option value="all" selected>Select All</option>
+                                    <option *ngFor="let option of airspacecontroloptions" [value]="option">{{ option }}
+                                    </option>
+                                </select>
+
+                                <label for="typeInput">Type:</label>
+                                <select class="select-all" id="typeInput">
+                                    <option value="all" selected>Select All</option>
+                                    <option *ngFor="let option of controltypeOptions" [value]="option">{{ option }}
+                                    </option>
+                                </select>
+
+                                <label for="upperLimitInput">Upper Limit (FL):</label>
+                                <input type="text" id="upperLimitInput" placeholder="Enter Upper Limit">
+
+                                <label for="lowerLimitInput">Lower Limit (FL):</label>
+                                <input type="text" id="lowerLimitInput" placeholder="Enter Lower Limit">
+                                <button type="submit">Apply Filter</button>
+                            </form>
+                        </div>
+
+                        <div id="restrictedAirspaceFilterPopup"
+                            *ngIf="activeLayer === 'restricted_areas' && filterPopupVisible" class="filter-popup">
+                            <h3>Restricted Areas Data Filter</h3>
+                            <form (submit)="restrictedAreasFilter($event)">
+                                <label for="nameInput">Name:</label>
+                                <input type="text" id="nameInput" placeholder="Enter Name">
+
+
+                                <label for="classificationInput">Airspace:</label>
+                                <select class="select-all" id="classificationInput">
+                                    <option value="all" selected>Select All</option>
+                                    <option *ngFor="let option of airspacerestrictedoptions" [value]="option">{{ option
+                                        }}
+                                    </option>
+                                </select>
+                                <label for="typeInput">Region:</label>
+                                <select class="select-all" id="typeInput">
+                                    <option value="all" selected>Select All</option>
+                                    <option *ngFor="let option of regiontypeOptions" [value]="option">{{ option }}
+                                    </option>
+                                </select>
+
+                                <label for="upperLimitInput">Upper Limit (FL):</label>
+                                <input type="text" id="upperLimitInput" placeholder="Enter Upper Limit">
+
+                                <label for="lowerLimitInput">Lower Limit (FL):</label>
+                                <input type="text" id="lowerLimitInput" placeholder="Enter Lower Limit">
+                                <button type="submit">Apply Filter</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>

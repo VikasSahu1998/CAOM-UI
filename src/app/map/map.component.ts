@@ -28,6 +28,10 @@ export class MapComponent implements OnInit {
   filterPopupVisible = false; // Controls the visibility of the filter popup
   selectedType: string = 'Conv'; // Default type (Conventional)
   airspaceOptions: string[] = ['Class A', 'Class B', 'Class C', 'Class D', 'Class E'];
+  airspacecontroloptions: string[] = ['D','E']
+  controltypeOptions: string[] = ['CTA', 'MTR', 'TMA'];
+  airspacerestrictedoptions: string[] = ['D','P','R']
+  regiontypeOptions: string[] = ['Chennai Region', 'Mumbai Region', 'Delhi Region','Kolkata Region','Temporary Reserved Area (TRA)','Temporary Segregated Area (TSA)'];
   Airform !: FormGroup;
   selectedAirport: string[] = [];
   selectedRunway: string[] = [];
@@ -1244,7 +1248,8 @@ export class MapComponent implements OnInit {
     const cqlFilter = this.selectFIR ? `id='${this.selectFIR}'` : '';
 
     // Construct the GetFeatureInfo URL
-    const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=India_FIR&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=FIR&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}&CQL_FILTER=${encodeURIComponent(cqlFilter)}`;
+    const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=India_FIR&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=India_FIR&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}&CQL_FILTER=${encodeURIComponent(cqlFilter)}`;
+    console.log('Constructed GetFeatureInfo URL:', this.selectFIR);
 
     fetch(url)
       .then(response => {
@@ -1672,11 +1677,119 @@ export class MapComponent implements OnInit {
       }
     }
   }
+  controlAirspaceFilter(event: Event) {
+    event.preventDefault();
+ 
+    // Retrieve input values
+    const nameInput = (document.getElementById('nameInput') as HTMLInputElement).value.trim();
+    const classificationInput = (document.getElementById('classificationInput') as HTMLSelectElement).value;
+    const typeInput = (document.getElementById('typeInput') as HTMLSelectElement).value;
+    const upperLimitInput = (document.getElementById('upperLimitInput') as HTMLInputElement).value.trim();
+    const lowerLimitInput = (document.getElementById('lowerLimitInput') as HTMLInputElement).value.trim();
+ 
+    let cqlFilter = '';
+ 
+    // Apply filters only if specific options are selected (not "Select All")
+    if (nameInput) {
+        cqlFilter += `name ILIKE '%${nameInput}%'`;
+    }
+    if (classificationInput && classificationInput !== 'all') {
+        cqlFilter += (cqlFilter ? ' AND ' : '') + `AirspaceClassification ILIKE '%${classificationInput}%'`;
+    }
+    if (typeInput && typeInput !== 'all') {
+        cqlFilter += (cqlFilter ? ' AND ' : '') + `type ILIKE '%${typeInput}%'`;
+    }
+    if (upperLimitInput) {
+        cqlFilter += (cqlFilter ? ' AND ' : '') + `upper_limits ILIKE '%${upperLimitInput}%'`;
+    }
+    if (lowerLimitInput) {
+        cqlFilter += (cqlFilter ? ' AND ' : '') + `lower_limits ILIKE '%${lowerLimitInput}%'`;
+    }
+ 
+    // Log CQL Filter and ensure layer removal
+    console.log("Generated CQL Filter:", cqlFilter);
+ 
+    // Remove existing layer before applying new filter
+    if (this.controlairspaceLayer) {
+        this.map.removeLayer(this.controlairspaceLayer);
+    }
+ 
+    // Setup custom WMS parameters
+    const customParams = {
+        layers: 'controlairspace',
+        format: 'image/png',
+        transparent: true,
+        CQL_FILTER: cqlFilter  // Apply the constructed CQL filter
+    };
+ 
+    // Add filtered layer to the map
+    this.controlairspaceLayer = L.tileLayer.wms(this.wmsUrl, customParams);
+    this.airportLayerGroup.clearLayers();
+    this.controlairspaceLayer.addTo(this.map).bringToFront();
+}
+ 
+ 
+ 
+restrictedAreasFilter(event: Event) {
+  event.preventDefault();
+ 
+  const nameInput = (document.getElementById('nameInput') as HTMLInputElement).value.trim();
+  const classificationInput = (document.getElementById('classificationInput') as HTMLSelectElement).value.trim();
+  const typeInput = (document.getElementById('typeInput') as HTMLSelectElement).value.trim();
+  const upperLimitInput = (document.getElementById('upperLimitInput') as HTMLInputElement).value.trim();
+  const lowerLimitInput = (document.getElementById('lowerLimitInput') as HTMLInputElement).value.trim();
+ 
+  let cqlFilter = '';
+ 
+  // **Handle Name Filter**
+  if (nameInput) cqlFilter += `name ILIKE '%${nameInput}%'`;
+ 
+  // **Handle Classification (Airspace) Filter**
+  if (classificationInput && classificationInput !== 'all') {
+      cqlFilter += (cqlFilter ? ' AND ' : '') + `restrictive_type ILIKE '%${classificationInput}%'`;
+  }
+ 
+  // **Handle Region Filter**
+  if (typeInput && typeInput !== 'all') {
+      cqlFilter += (cqlFilter ? ' AND ' : '') + `region ILIKE '%${typeInput}%'`;
+  }
+ 
+  // **Handle Upper & Lower Limits**
+  if (upperLimitInput) {
+      cqlFilter += (cqlFilter ? ' AND ' : '') + `upper_limits = 'FL ${upperLimitInput}'`;
+  }
+  if (lowerLimitInput) {
+      cqlFilter += (cqlFilter ? ' AND ' : '') + `lower_limits = 'FL ${lowerLimitInput}'`;
+  }
+ 
+  // **If "Select All" is chosen, remove filter condition**
+  if (classificationInput === 'all') {
+      cqlFilter = cqlFilter.replace(/restrictive_type ILIKE '.*?'/, '');
+  }
+ 
+  console.log("CQL Filter:", cqlFilter); // Debugging log
+ 
+  // **Update WMS Layer**
+  if (this.restricted_areasLayer) {
+      this.map.removeLayer(this.restricted_areasLayer);
+  }
+ 
+  const customParams = {
+      layers: 'restricted_areas',
+      format: 'image/png',
+      transparent: true,
+      CQL_FILTER: cqlFilter
+  };
+ 
+  this.restricted_areasLayer = L.tileLayer.wms(this.wmsUrl, customParams);
+  this.airportLayerGroup.clearLayers();
+  this.restricted_areasLayer.addTo(this.map).bringToFront();
+}
 
   toggleFilterPopup() {
     this.filterPopupVisible = !this.filterPopupVisible;
   }
-  activeLayer: 'convlinedata' | 'nonconvlinedata' | null = null;
+  activeLayer: 'convlinedata' | 'nonconvlinedata' | 'controlairspace' | 'restricted_areas' | null = null;
 
   // Method to close the filter popup
   closeFilterPopup(event: Event) {
