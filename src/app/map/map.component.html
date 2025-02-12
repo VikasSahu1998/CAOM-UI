@@ -1,6 +1,6 @@
 <div class="offcanvas offcanvas-lg offcanvas-top bg-transparent" data-bs-backdrop="true" tabindex="-1" id="offcanvasTop"
     aria-labelledby="offcanvasTopLabel">
-
+ 
     <nav class="navbar navbar-expand-lg  bg-body-tertiary">
         <div class="container-fluid">
             <!-- <a class="navbar-brand" href="https://www.cognitivenavigation.com" title="Cognitive navigation Pvt.Ltd">
@@ -99,19 +99,19 @@
                             <li><a class="dropdown-item" href="#">Fuel Dashboard</a></li>
                         </ul>
                     </li>
-
+ 
                     <!-- <button type="button" mat-button class="bg-body-tertiary " color="black">Log In</button> -->
                 </ul>
-
+ 
             </div>
             <button type="button" mat-stroked-button class="bg-body-tertiary text-end" style="color: red;"
                 (click)="logout()">Log-Out</button>
-
+ 
         </div>
     </nav>
 </div>
 <div class="example-container" [class.example-is-mobile]="mobileQuery.matches">
-
+ 
     <mat-sidenav-container class="example-sidenav-container" [style.marginTop.px]="mobileQuery.matches ? 56 : 0"
         autosize>
         <mat-sidenav #snav [mode]="mobileQuery.matches ? 'over' : 'side'" opened="true"
@@ -126,7 +126,7 @@
             </div>
             <form [formGroup]="Airform" class="text-center mt-4" autocomplete="on" novalidate>
                 <div class="example-container">
-
+ 
                     <!--Select Airport -->
                     <div>
                         <mat-form-field appearance="outline">
@@ -141,8 +141,8 @@
                             <mat-hint>Select Airport</mat-hint>
                         </mat-form-field>
                     </div>
-
-
+ 
+ 
                     <!--Select Runway -->
                     <div class="mt-3">
                         <mat-form-field appearance="outline">
@@ -171,8 +171,8 @@
                             <mat-hint>Select Runway</mat-hint>
                         </mat-form-field>
                     </div>
-
-
+ 
+ 
                     <!--Select Type of Procedure -->
                     <div class="mt-3">
                         <mat-form-field appearance="outline">
@@ -190,7 +190,7 @@
                             <mat-hint>Select Type of Procedure</mat-hint>
                         </mat-form-field>
                     </div>
-
+ 
                     <!--Select Procedure Name -->
                     <div class="mt-3">
                         <mat-form-field appearance="outline">
@@ -211,22 +211,22 @@
                     <div class="d-grid gap-2 col-10 mx-auto mt-4">
                         <button type="button" value="Export
                     GeoJSON" class="btn btn-outline-primary rounded-5 py-2 px-4">Export GeoJSON</button>
-
+ 
                         <button type="button" value="Export CSV"
                             class="btn btn-outline-primary rounded-5 py-2 px-4">Export
                             CSV</button>
-
+ 
                     </div>
                 </div>
-
+ 
             </form>
-
+ 
         </mat-sidenav>
-
+ 
         <mat-sidenav-content>
             <div class="content">
                 <div class="map-container">
-
+ 
                     <button mat-mini-fab color="none" class="top-center-button" title="Open Navigation Toolbar"
                         type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasTop"
                         aria-controls="offcanvasTop">
@@ -261,7 +261,7 @@
                             <mat-icon>{{ isSidenavOpen ? 'keyboard_arrow_left' : 'keyboard_arrow_right' }}</mat-icon>
                         </div>
                     </button>
-
+ 
                     <button mat-mini-fab color="none" class="manu1" [matMenuTriggerFor]="belowMenu"
                         (click)="toggleMenu()">
                         <mat-icon color="primary">menu</mat-icon>
@@ -278,7 +278,7 @@
                                         style="height: 25px; width: 30px;" alt="conv">
                                 </div>
                             </button>
-
+ 
                             <!-- Button for Non-Conventional Airways -->
                             <button mat-mini-fab class="mycolor" title="Non-Conventional Airways"
                                 (click)="loadLayer($event, 'nonconvlinedata', 'nonConvLineDataLayer')">
@@ -287,7 +287,14 @@
                                         style="height: 25px; width: 30px;" alt="noncon">
                                 </div>
                             </button>
-
+ 
+                            <button mat-mini-fab class="mycolor" title="raster dem"
+                                (click)="loadLayer($event, 'India_DEM', 'India_DEM')">
+                                <div class="icon-container">
+                                    <i class="bi bi-pentagon text-primary-emphasis" title="DEM"></i>
+                                </div>
+                            </button>
+ 
                             <!-- Button for FIR -->
                             <button mat-mini-fab class="mycolor" title="FIR"
                                 (click)="loadLayer($event, 'India_FIR', 'India_FIR')">
@@ -295,7 +302,7 @@
                                     <i class="bi bi-pentagon text-primary-emphasis" title="FIR"></i>
                                 </div>
                             </button>
-
+ 
                             <!-- Button for Waypoint -->
                             <button mat-mini-fab class="mycolor" title="Waypoint"
                                 (click)="loadLayer($event, 'significantpoints', 'waypointLayer')">
@@ -303,7 +310,7 @@
                                     <mat-icon title="Waypoint" color="primary">change_history</mat-icon>
                                 </div>
                             </button>
-
+ 
                             <!-- Button for Navaids -->
                             <button mat-mini-fab class="mycolor" title="Navaids"
                                 (click)="loadLayer($event, 'navaids', 'navaidsLayer')">
@@ -312,7 +319,7 @@
                                         alt="Navaids">
                                 </div>
                             </button>
-
+ 
                             <!-- Button for Controlled Airspace -->
                             <button mat-mini-fab class="mycolor" title="Controlled Airspace"
                                 (click)="loadLayer($event, 'controlairspace', 'controlairspaceLayer')">
@@ -321,7 +328,7 @@
                                         title="Controlled Airspace" alt="Controlled Airspace">
                                 </div>
                             </button>
-
+ 
                             <!-- Button for Restricted Airspace -->
                             <button mat-mini-fab class="mycolor" title="Restricted Airspace"
                                 (click)="loadLayer($event, 'restricted_areas', 'restricted_areasLayer')">
@@ -330,7 +337,7 @@
                                         style="height: 25px; width: 25px;" alt="Restricted Airspace">
                                 </div>
                             </button>
-
+ 
                             <!-- Button for Aerodrome Obstacle -->
                             <button mat-mini-fab class="mycolor" title="Aerodrome Obstacle"
                                 (click)="loadLayer($event, 'aerodrome_obstacle', 'aerodrome_obstacleLayer')">
@@ -339,7 +346,7 @@
                                         style="height: 80%; width: 50px;" alt="Aerodrome Obstacle">
                                 </div>
                             </button>
-
+ 
                             <button mat-mini-fab class="mycolor" title="Airport"
                                 (click)="loadLayer($event, 'airportdetails', 'airportdetailsLayer')">
                                 <div class="icon-container">
@@ -347,20 +354,22 @@
                                         alt="Airport">
                                 </div>
                             </button>
-                            <button mat-mini-fab class="mycolor" title="Grid Mora"
-                                (click)="loadLayer($event, 'GridMora', '')">
-                                <div class="icon-container">
-                                    <img src="assets/airport.png" title="Grid Mora" style="height: 25px; width: 30px;"
-                                        alt="Airport">
-                                </div>
-                            </button>
 
+
+                            <button mat-mini-fab class="mycolor" title="Grid Mora"
+                            (click)="loadLayer($event, 'GridMora', 'GridMora')">
+                            <div class="icon-container">
+                                <img src="assets/airport.png" title="GridMora" style="height: 25px; width: 30px;"
+                                    alt="Grid Mora">
+                            </div>
+                        </button>
+ 
                         </div>
                     </mat-menu>
-
+ 
                     <div id="map" style="height: 100vh; width:100%; position: relative;">
-
-
+ 
+ 
                         <!-- Filter Form for Conventional Line Data -->
                         <div id="convFilterPopup" *ngIf="activeLayer === 'convlinedata' && filterPopupVisible"
                             class="filter-popup">
@@ -368,27 +377,27 @@
                             <form (submit)="applyFilter($event)">
                                 <label for="airwayIdInput">Airway ID:</label>
                                 <input type="text" id="airwayIdInput" placeholder="Enter Airway ID">
-
+ 
                                 <label for="upperLimitInput">Upper Limit (FL):</label>
                                 <input type="text" id="upperLimitInput" placeholder="Enter Upper Limit">
-
+ 
                                 <label for="lowerLimitInput">Lower Limit (FL):</label>
                                 <input type="text" id="lowerLimitInput" placeholder="Enter Lower Limit">
-
+ 
                                 <label for="meaInput">MEA:</label>
                                 <input type="text" id="meaInput" placeholder="Enter MEA">
-
+ 
                                 <label for="airspaceInput">Airspace:</label>
                                 <select id="airspaceInput">
                                     <option value="" disabled selected>Select an airspace</option>
                                     <option *ngFor="let option of airspaceOptions" [value]="option">{{ option }}
                                     </option>
                                 </select>
-
+ 
                                 <button type="submit">Apply Filter</button>
                             </form>
                         </div>
-
+ 
                         <!-- Filter Form for Non-Conventional Line Data -->
                         <div id="nonConvFilterPopup" *ngIf="activeLayer === 'nonconvlinedata' && filterPopupVisible"
                             class="filter-popup">
@@ -396,87 +405,111 @@
                             <form (submit)="applyNonConvFilter($event)">
                                 <label for="nonairwayIdInput">Airway ID:</label>
                                 <input type="text" id="nonairwayIdInput" placeholder="Enter Airway ID">
-
+ 
                                 <label for="nonupperLimitInput">Upper Limit (FL):</label>
                                 <input type="text" id="nonupperLimitInput" placeholder="Enter Upper Limit">
-
+ 
                                 <label for="nonlowerLimitInput">Lower Limit (FL):</label>
                                 <input type="text" id="nonlowerLimitInput" placeholder="Enter Lower Limit">
-
+ 
                                 <label for="nonmeaInput">MEA:</label>
                                 <input type="text" id="nonmeaInput" placeholder="Enter MEA">
-
+ 
                                 <label for="nonairspaceInput">Airspace:</label>
                                 <select id="nonairspaceInput">
                                     <option value="" disabled selected>Select an airspace</option>
                                     <option *ngFor="let option of airspaceOptions" [value]="option">{{ option }}
                                     </option>
                                 </select>
-
-
+ 
+ 
                                 <button type="submit">Apply Filter</button>
                             </form>
                         </div>
-
+ 
                         <div id="controlAirspaceFilterPopup"
                             *ngIf="activeLayer === 'controlairspace' && filterPopupVisible" class="filter-popup">
                             <h3>Control Airspace Data Filter</h3>
                             <form (submit)="controlAirspaceFilter($event)">
                                 <label for="nameInput">Name:</label>
                                 <input type="text" id="nameInput" placeholder="Enter Name">
-                                <label for="classificationInput">Airspace:</label>
-                                <select class="select-all" id="classificationInput">
-                                    <option value="all" selected>Select All</option>
-                                    <option *ngFor="let option of airspacecontroloptions" [value]="option">{{ option }}
-                                    </option>
-                                </select>
-
+ 
+                                <!-- Label for Classification -->
+                                <label for="classificationInput">Airspace Classification:</label>
+                                <mat-form-field appearance="outline">
+                                    <mat-label>Select Airspace Classification</mat-label>
+                                   
+                                    <mat-select id="classificationInput" multiple [(value)]="selectedClassifications">
+                                        <mat-option value="all">Select All</mat-option>
+                                        <mat-option *ngFor="let option of airspacecontroloptions" [value]="option">{{
+                                            option }}</mat-option>
+                                    </mat-select>
+                                </mat-form-field>
+ 
+                                <!-- Label for Type -->
                                 <label for="typeInput">Type:</label>
-                                <select class="select-all" id="typeInput">
-                                    <option value="all" selected>Select All</option>
-                                    <option *ngFor="let option of controltypeOptions" [value]="option">{{ option }}
-                                    </option>
-                                </select>
-
+                                <mat-form-field appearance="outline">
+                                    <mat-label>Select Type</mat-label>
+                                    <mat-select id="typeInput" multiple [(value)]="selectedTypes">
+                                        <mat-option value="all">Select All</mat-option>
+                                        <mat-option *ngFor="let option of controltypeOptions" [value]="option.value">
+                                            {{ option.label }}
+                                        </mat-option>
+                                    </mat-select>
+                                   
+                                </mat-form-field>
+ 
                                 <label for="upperLimitInput">Upper Limit (FL):</label>
                                 <input type="text" id="upperLimitInput" placeholder="Enter Upper Limit">
-
+ 
                                 <label for="lowerLimitInput">Lower Limit (FL):</label>
                                 <input type="text" id="lowerLimitInput" placeholder="Enter Lower Limit">
+ 
                                 <button type="submit">Apply Filter</button>
                             </form>
                         </div>
-
+ 
+ 
                         <div id="restrictedAirspaceFilterPopup"
-                            *ngIf="activeLayer === 'restricted_areas' && filterPopupVisible" class="filter-popup">
-                            <h3>Restricted Areas Data Filter</h3>
-                            <form (submit)="restrictedAreasFilter($event)">
-                                <label for="nameInput">Name:</label>
-                                <input type="text" id="nameInput" placeholder="Enter Name">
-
-
-                                <label for="classificationInput">Airspace:</label>
-                                <select class="select-all" id="classificationInput">
-                                    <option value="all" selected>Select All</option>
-                                    <option *ngFor="let option of airspacerestrictedoptions" [value]="option">{{ option
-                                        }}
-                                    </option>
-                                </select>
-                                <label for="typeInput">Region:</label>
-                                <select class="select-all" id="typeInput">
-                                    <option value="all" selected>Select All</option>
-                                    <option *ngFor="let option of regiontypeOptions" [value]="option">{{ option }}
-                                    </option>
-                                </select>
-
-                                <label for="upperLimitInput">Upper Limit (FL):</label>
-                                <input type="text" id="upperLimitInput" placeholder="Enter Upper Limit">
-
-                                <label for="lowerLimitInput">Lower Limit (FL):</label>
-                                <input type="text" id="lowerLimitInput" placeholder="Enter Lower Limit">
-                                <button type="submit">Apply Filter</button>
-                            </form>
-                        </div>
+                        *ngIf="activeLayer === 'restricted_areas' && filterPopupVisible" class="filter-popup">
+                        <h3>Restricted Areas Data Filter</h3>
+                        <form (submit)="restrictedAreasFilter($event)">
+                            <label for="nameInput">Name:</label>
+                            <input type="text" id="nameInput" placeholder="Enter Name">
+                   
+                            <!-- Multi-Select for Airspace (Classification) -->
+                            <label for="classificationInput">Airspace:</label>
+                            <mat-form-field appearance="outline" class="full-width">
+                                <mat-label>Select Airspace</mat-label>
+                                <mat-select id="classificationInput" multiple [(value)]="selectedClassifications">
+                                    <mat-option value="all">Select All</mat-option>
+                                    <mat-option *ngFor="let option of airspacerestrictedoptions" [value]="option.value">
+                                        {{ option.label }}
+                                    </mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                   
+                            <!-- Multi-Select for Region -->
+                            <label for="typeInput">Region:</label>
+                            <mat-form-field appearance="outline" class="full-width">
+                                <mat-label>Select Region</mat-label>
+                                <mat-select id="typeInput" multiple [(value)]="selectedTypes">
+                                    <mat-option value="all">Select All</mat-option>
+                                    <mat-option *ngFor="let option of regiontypeOptions" [value]="option">{{ option }}</mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                   
+                            <label for="upperLimitInput">Upper Limit (FL):</label>
+                            <input type="text" id="upperLimitInput" placeholder="Enter Upper Limit">
+                   
+                            <label for="lowerLimitInput">Lower Limit (FL):</label>
+                            <input type="text" id="lowerLimitInput" placeholder="Enter Lower Limit">
+                           
+                            <button type="submit">Apply Filter</button>
+                        </form>
+                    </div>
+                   
+ 
                     </div>
                 </div>
             </div>

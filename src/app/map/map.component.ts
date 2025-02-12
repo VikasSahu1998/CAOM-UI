@@ -28,10 +28,21 @@ export class MapComponent implements OnInit {
   filterPopupVisible = false; // Controls the visibility of the filter popup
   selectedType: string = 'Conv'; // Default type (Conventional)
   airspaceOptions: string[] = ['Class A', 'Class B', 'Class C', 'Class D', 'Class E'];
-  airspacecontroloptions: string[] = ['D','E']
-  controltypeOptions: string[] = ['CTA', 'MTR', 'TMA'];
-  airspacerestrictedoptions: string[] = ['D','P','R']
-  regiontypeOptions: string[] = ['Chennai Region', 'Mumbai Region', 'Delhi Region','Kolkata Region','Temporary Reserved Area (TRA)','Temporary Segregated Area (TSA)'];
+  airspacecontroloptions: string[] = ['D', 'E']
+  controltypeOptions = [
+    { label: 'Control Area', value: 'CTA' },
+    { label: 'Military Control Zones', value: 'MTR' },
+    { label: 'Terminal Control Area', value: 'TMA' }
+  ];
+
+  airspacerestrictedoptions = [
+    { label: 'Danger', value: 'D' },
+    { label: 'Prohibited', value: 'P' },
+    { label: 'Restricted', value: 'R' },
+    { label: 'Temporary Reserved Area (TRA)', value: 'Temporary Reserved Area (TRA)' },
+    { label: 'Temporary Segregated Area (TSA)', value: 'Temporary Segregated Area (TSA)' }
+  ];
+  regiontypeOptions: string[] = ['Chennai Region', 'Mumbai Region', 'Delhi Region', 'Kolkata Region'];
   Airform !: FormGroup;
   selectedAirport: string[] = [];
   selectedRunway: string[] = [];
@@ -46,6 +57,7 @@ export class MapComponent implements OnInit {
   selectwaypoint: string = '';
   selectAirport: string = '';
   selectFIR: string = '';
+  selectDEM: string = '';
   [key: string]: any; // Allows dynamic properties
   wmsUrl = 'http://cognitive-casper-dev-alb-1938233015.ap-south-1.elb.amazonaws.com:8080/geoserver/wms';
   private waypointLayer!: L.TileLayer.WMS;
@@ -61,6 +73,7 @@ export class MapComponent implements OnInit {
   private FIR!: L.TileLayer.WMS;
   private India_FIR!: L.TileLayer.WMS;
   private subscription: Subscription | null = null;
+  private layerEventListeners: { [key: string]: (e: L.LeafletMouseEvent) => void } = {};
   menuOpen: boolean = false;
   flightslive: Flight[] = [];
   flights: Plane[] = [];
@@ -140,6 +153,8 @@ export class MapComponent implements OnInit {
     });
     this.initMap();
     this.watchAirportChanges();
+    // this.map.on('mousemove', (event: L.LeafletMouseEvent) => this.onMouseMove(event));
+    // this.map.on('click', (event: L.LeafletMouseEvent) => this.getFeatureInfo(event));
 
   }
 
@@ -1101,21 +1116,55 @@ export class MapComponent implements OnInit {
       }
     }
   }
+  activeLayers: string[] = [];
+  onMouseMove(event: L.LeafletMouseEvent) {
+    const bbox = this.map.getBounds().toBBoxString();
+    const size = this.map.getSize();
+    const point = this.map.latLngToContainerPoint(event.latlng);
+
+    let featureFound = false;
+
+    const checkLayerFeatures = (layerIndex: number) => {
+      if (layerIndex >= this.activeLayers.length) {
+        if (!featureFound) {
+          this.map.getContainer().style.cursor = '';  // Reset if no feature found
+        }
+        return;
+      }
+
+      const layer = this.activeLayers[layerIndex];
+      const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=${layer}&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=${layer}&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&buffer=5`;
+
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data.features && data.features.length > 0) {
+            featureFound = true;
+            this.map.getContainer().style.cursor = 'pointer';  // Show pointer when feature is found
+          } else {
+            checkLayerFeatures(layerIndex + 1);  // Check next layer
+          }
+        })
+        .catch(() => checkLayerFeatures(layerIndex + 1));  // Check next layer on error
+    };
+
+    checkLayerFeatures(0);
+  }
 
 
   getFeatureInfo(event: L.LeafletMouseEvent) {
     console.log('Fetching feature info...');
- 
+
     const bbox = this.map.getBounds().toBBoxString();
     const size = this.map.getSize();
     const point = this.map.latLngToContainerPoint(event.latlng);
- 
+
     // Create the GetFeatureInfo URL with current filters
     const cqlFilter = this.selectedAirwayId ? `airway_id='${this.selectedAirwayId}'` : '';
     const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=convlinedata&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=convlinedata&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}${cqlFilter ? '&CQL_FILTER=' + encodeURIComponent(cqlFilter) : ''}&buffer=20`;
- 
+
     console.log('Constructed GetFeatureInfo URL:', url);
- 
+
     fetch(url)
       .then(response => {
         if (!response.ok) {
@@ -1129,27 +1178,16 @@ export class MapComponent implements OnInit {
           let popupContent = `<h3>Feature Info</h3>`;
           data.features.forEach((feature: { properties: any; }) => {
             const properties = feature.properties;
-            console.log('Feature properties:', properties);  // Log properties for each feature
- 
+            console.log('Feature properties:', properties);
+
             if (properties) {
               const displayProperties = [
-                'airway_id',
-                'start_point',
-                'end_point',
-                'track_magnetic',
-                'reverse_magnetic',
-                'radial_distance',
-                'upper_limit',
-                'lower_limit',
-                'airspace',
-                'mea',
-                'lateral_limits',
-                'direction_of_cruising_levels',
-                'type',
-                'remarks'
+                'airway_id', 'start_point', 'end_point', 'track_magnetic', 'reverse_magnetic',
+                'radial_distance', 'upper_limit', 'lower_limit', 'airspace', 'mea',
+                'lateral_limits', 'direction_of_cruising_levels', 'type', 'remarks'
               ];
               displayProperties.forEach(prop => {
-                if (properties.hasOwnProperty(prop)) {
+                if (properties[prop]) {
                   popupContent += `<strong>${prop}:</strong> ${properties[prop]}<br>`;
                 }
               });
@@ -1157,33 +1195,40 @@ export class MapComponent implements OnInit {
               console.log('No properties found for feature:', feature);
             }
           });
- 
+
           L.popup()
             .setLatLng(event.latlng)
             .setContent(popupContent)
             .openOn(this.map);
+
+          // Highlight the selected feature
+          this.highlightFeature(data.features[0]);
         } else {
           console.log('No features found');
         }
       })
       .catch(error => {
         console.error('Error fetching feature info:', error);
+        L.popup()
+          .setLatLng(event.latlng)
+          .setContent('Error fetching feature information.')
+          .openOn(this.map);
       });
   }
- 
+
   getNonConvFeatureInfo(event: L.LeafletMouseEvent) {
     console.log('Fetching feature info...');
- 
+
     const bbox = this.map.getBounds().toBBoxString();
     const size = this.map.getSize();
     const point = this.map.latLngToContainerPoint(event.latlng);
- 
+
     // Create the GetFeatureInfo URL with current filters
     const cqlFilter = this.selectedAirwayId ? `airway_id='${this.selectedAirwayId}'` : '';
     const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=nonconvlinedata&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=nonconvlinedata&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}${cqlFilter ? '&CQL_FILTER=' + encodeURIComponent(cqlFilter) : ''}&buffer=20`;
- 
+
     console.log('Constructed GetFeatureInfo URL:', url);
- 
+
     fetch(url)
       .then(response => {
         if (!response.ok) {
@@ -1198,7 +1243,7 @@ export class MapComponent implements OnInit {
           data.features.forEach((feature: { properties: any; }) => {
             const properties = feature.properties;
             console.log('Feature properties:', properties);  // Log properties for each feature
- 
+
             if (properties) {
               const displayProperties = [
                 'airway_id',
@@ -1225,11 +1270,12 @@ export class MapComponent implements OnInit {
               console.log('No properties found for feature:', feature);
             }
           });
- 
+
           L.popup()
             .setLatLng(event.latlng)
             .setContent(popupContent)
             .openOn(this.map);
+            this.highlightFeature(data.features[0]);
         } else {
           console.log('No features found');
         }
@@ -1240,16 +1286,29 @@ export class MapComponent implements OnInit {
   }
 
   getFIRFeatureInfo(event: L.LeafletMouseEvent) {
+    console.log("Fetching FIR feature info...");
+
     const bbox = this.map.getBounds().toBBoxString();
     const size = this.map.getSize();
     const point = this.map.latLngToContainerPoint(event.latlng);
 
-    // Create the CQL filter based on selected airport
-    const cqlFilter = this.selectFIR ? `id='${this.selectFIR}'` : '';
+    // Check if selectFIR has a valid value
+    if (!this.selectFIR) {
+      console.warn("No FIR selected. Fetching all available FIRs.");
+    }
+
+    // Create the CQL filter only if selectFIR is defined
+    const cqlFilter = this.selectFIR ? `CQL_FILTER=id='${this.selectFIR}'` : '';
 
     // Construct the GetFeatureInfo URL
-    const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=India_FIR&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=India_FIR&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}&CQL_FILTER=${encodeURIComponent(cqlFilter)}`;
-    console.log('Constructed GetFeatureInfo URL:', this.selectFIR);
+    const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo` +
+      `&layers=India_FIR&styles=&format=image/png&transparent=true` +
+      `&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326` +
+      `&bbox=${bbox}&query_layers=India_FIR&info_format=application/json` +
+      `&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}` +
+      `${cqlFilter ? `&${encodeURIComponent(cqlFilter)}` : ''}`;
+
+    console.log("Generated GetFeatureInfo URL:", url);
 
     fetch(url)
       .then(response => {
@@ -1261,60 +1320,154 @@ export class MapComponent implements OnInit {
         return response.json();
       })
       .then(data => {
-        console.log('Response data:', data);
-        if (data.features && data.features.length > 0) {
-          let popupContent = `<h3>FIR Info</h3>`; // Start with Airport Info header
-          data.features.forEach((feature: { properties: any; }) => {
-            const properties = feature.properties;
-            console.log('Feature properties:', properties);  // Log properties for each feature
+        console.log('Full Response Data:', JSON.stringify(data, null, 2));
 
-            if (properties) {
-              popupContent += `
-                          
-                          <strong>Supplement Region:</strong> ${properties.supp_regio || 'N/A'}<br>
-                          <strong>Remarks:</strong> ${properties.remarks3 || 'N/A'}<br>
-                          <strong>Historic:</strong> ${properties.historic || 'N/A'}<br>
-                          <strong>Name of Company:</strong> ${properties.nom_comp || 'N/A'}<br>
-                          <strong>Responsible:</strong> ${properties.resp || 'N/A'}<br>
-                          <strong>ICAO Code:</strong> ${properties.icaocode || 'N/A'}<br>
-                          <strong>UCL:</strong> ${properties.ulc || 'N/A'}<br>
-                          <strong>Lower Limit:</strong> ${properties.lower || 'N/A'}<br>
-                          <strong>Upper Limit:</strong> ${properties.upper || 'N/A'}<br>
-                          <strong>Kind:</strong> ${properties.kind || 'N/A'}<br>
-                          <strong>Region:</strong> ${properties.region || 'N/A'}<br>
-                          <strong>FIR Name:</strong> ${properties.firname || 'N/A'}<br>
-                          <strong>Perimeter (km):</strong> ${properties.perimekm !== undefined ? properties.perimekm.toFixed(2) : 'N/A'}<br>
-                          <strong>Area (sq km):</strong> ${properties.areasqkm !== undefined ? properties.areasqkm.toFixed(2) : 'N/A'}<br>
-                          <strong>Central Latitude:</strong> ${properties.centlat !== undefined ? properties.centlat.toFixed(6) : 'N/A'}<br>
-                          <strong>Central Longitude:</strong> ${properties.centlong !== undefined ? properties.centlong.toFixed(6) : 'N/A'}<br>
-                      `;
-            }
-          });
-          // Display the popup with all collected content
-          L.popup()
-            .setLatLng(event.latlng)
-            .setContent(popupContent)
-            .openOn(this.map);
-        } else {
-          console.log('No features found');
+        if (!data.features || data.features.length === 0) {
+          console.warn("No FIR data found at this location. Check WMS service response.");
+          return;
         }
+
+        let popupContent = `<h3>FIR Info</h3>`;
+        data.features.forEach((feature: { properties: any }) => {
+          const properties = feature.properties;
+          console.log('Feature properties:', properties);
+
+          if (properties) {
+            popupContent += `
+                        <strong>Name:</strong> ${properties.name || 'N/A'}<br>
+                        <strong>ICAO Code:</strong> ${properties.icao_code || 'N/A'}<br>
+                        <strong>Unit providing service:</strong> ${properties.unit_service || 'N/A'}<br>
+                        <strong>Call sign:</strong> ${properties.call_sign || 'N/A'}<br>
+                        <strong>Hours of Service:</strong> ${properties.hrs_of_service || 'N/A'}<br>
+                        <strong>Class of airspace:</strong> ${properties.class_airspace || 'N/A'}<br>
+                        <strong>Frequency:</strong> ${properties.frequency || 'N/A'}<br>
+                        <strong>Remarks:</strong> ${properties.remarks || 'N/A'}<br>
+                    `;
+          }
+        });
+        this.highlightFeature(data.features[0]);
+        // Display the popup with all collected content
+        L.popup()
+          .setLatLng(event.latlng)
+          .setContent(popupContent)
+          .openOn(this.map);
       })
+      
       .catch(error => {
-        console.error('Error fetching airport feature info:', error);
+        console.error('Error fetching FIR feature info:', error);
       });
   }
+
+  getDEMFeatureInfo(event: L.LeafletMouseEvent) {
+    console.log("Fetching FIR feature info...");
+
+    const bbox = this.map.getBounds().toBBoxString();
+    const size = this.map.getSize();
+    const point = this.map.latLngToContainerPoint(event.latlng);
+
+    // Check if selectFIR has a valid value
+    if (!this.selectFIR) {
+      console.warn("No FIR selected. Fetching all available FIRs.");
+    }
+
+    // Create the CQL filter only if selectFIR is defined
+    const cqlFilter = this.selectDEM ? `CQL_FILTER=id='${this.selectDEM}'` : '';
+
+    // Construct the GetFeatureInfo URL
+    const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo` +
+      `&layers=India_DEM&styles=&format=image/png&transparent=true` +
+      `&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326` +
+      `&bbox=${bbox}&query_layers=India_DEM&info_format=application/json` +
+      `&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}` +
+      `${cqlFilter ? `&${encodeURIComponent(cqlFilter)}` : ''}`;
+
+    console.log("Generated GetFeatureInfo URL:", url);
+
+    fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => {
+            throw new Error(`Network response was not ok: ${text}`);
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('Full Response Data:', JSON.stringify(data, null, 2));
+
+        if (!data.features || data.features.length === 0) {
+          console.warn("No FIR data found at this location. Check WMS service response.");
+          return;
+        }
+
+        let popupContent = `<h3>FIR Info</h3>`;
+        data.features.forEach((feature: { properties: any }) => {
+          const properties = feature.properties;
+          console.log('Feature properties:', properties);
+          properties.ELEVATION = properties.ELEVATION.toFixed(2)
+          if (properties) {
+            popupContent += `
+                      <strong>ELEVATION:</strong> ${properties.ELEVATION || 'N/A'}<br>
+                     
+                  `;
+          }
+        });
+
+        // Display the popup with all collected content
+        L.popup()
+          .setLatLng(event.latlng)
+          .setContent(popupContent)
+          .openOn(this.map);
+          this.highlightFeature(data.features[0]);
+      })
+      .catch(error => {
+        console.error('Error fetching FIR feature info:', error);
+      });
+  }
+
+
+  currentHighlightedWaypoint: any = null;
+
+  highlightWaypoint(feature: any) {
+  // Define a triangle SVG icon
+  const triangleIcon = L.divIcon({
+    html: `
+      <svg width="15" height="15" viewBox="0 0 20 20">
+        <polygon points="10,0 20,20 0,20"  stroke="red" stroke-width="2"/>
+      </svg>
+    `,
+    className: '', // Remove default Leaflet styling
+    iconSize: [20, 20], // Adjust the size as needed
+    iconAnchor: [10, 20] // Anchor the point to the tip of the triangle
+  });
+
+  // Remove previous highlight if it exists
+  if (this.currentHighlightedWaypoint) {
+    this.map.removeLayer(this.currentHighlightedWaypoint);
+  }
+
+  // Add the new triangle marker
+  const layer = L.geoJSON(feature, {
+    pointToLayer: (geoJsonPoint, latlng) => {
+      return L.marker(latlng, { icon: triangleIcon });
+    }
+  }).addTo(this.map);
+
+  this.currentHighlightedWaypoint = layer; // Store reference for removing later
+}
 
   getWaypointFeatureInfo(event: L.LeafletMouseEvent) {
     console.log('Fetching feature info...');
     const bbox = this.map.getBounds().toBBoxString();
     const size = this.map.getSize();
     const point = this.map.latLngToContainerPoint(event.latlng);
+  
     // Create the GetFeatureInfo URL with current filters
     const cqlFilter = this.selectwaypoint ? `id='${this.selectwaypoint}'` : '';
-    console.log(cqlFilter, "dert")
     const url = `${this.wmsUrl}?service=WMS&request=GetFeatureInfo&layers=significantpoints&styles=&format=image/png&transparent=true&version=1.1.1&height=${size.y}&width=${size.x}&srs=EPSG:4326&bbox=${bbox}&query_layers=significantpoints&info_format=application/json&x=${Math.floor(point.x)}&y=${Math.floor(point.y)}&_=${Date.now()}${cqlFilter ? '&CQL_FILTER=' + encodeURIComponent(cqlFilter) : ''}`;
+    
     console.log('Constructed GetFeatureInfo URL:', url);
-
+  
     fetch(url)
       .then(response => {
         if (!response.ok) {
@@ -1325,24 +1478,29 @@ export class MapComponent implements OnInit {
       .then(data => {
         console.log('Response data:', data);
         if (data.features && data.features.length > 0) {
-          let popupContent = `<h3>Waypoint Info</h3>`; // Start with Waypoint Info header
-          data.features.forEach((feature: { properties: any; }) => {
+          let popupContent = `<h3>Waypoint Info</h3>`;
+          
+          data.features.forEach((feature: { properties: any }) => {
             const properties = feature.properties;
-            console.log('Feature properties:', properties);  // Log properties for each feature
-
+            console.log('Feature properties:', properties);
+  
             if (properties) {
               popupContent += `
-                         
-                          <strong>Waypoints:</strong> ${properties.waypoints}<br>
-                          <strong>Name of Routes:</strong> ${properties.name_of_routes}<br>
-                      `;
+                <strong>Waypoints:</strong> ${properties.waypoints}<br>
+                <strong>Name of Routes:</strong> ${properties.name_of_routes}<br>
+              `;
             }
+            
+            // Highlight each feature (point)
+            this.highlightWaypoint(feature);
           });
-          // Display the popup with all collected content
+  
+          // Display the popup
           L.popup()
             .setLatLng(event.latlng)
             .setContent(popupContent)
             .openOn(this.map);
+          
         } else {
           console.log('No features found');
         }
@@ -1351,6 +1509,7 @@ export class MapComponent implements OnInit {
         console.error('Error fetching feature info:', error);
       });
   }
+  
 
   getNavaidFeatureInfo(event: L.LeafletMouseEvent) {
     console.log('Fetching Navaid feature info...');
@@ -1484,12 +1643,12 @@ export class MapComponent implements OnInit {
 
             if (properties) {
               popupContent += `
-                      <strong>Designation:</strong> ${properties.designation || 'N/A'}<br>
-                      <strong>Airspace Name:</strong> ${properties.name || 'N/A'}<br>
-                      <strong>FIR:</strong> ${properties.fir || 'N/A'}<br>
-                      <strong>Type:</strong> ${properties.type || 'N/A'}<br>
-                      <strong>Upper Limit:</strong> ${properties.upper_limit || 'N/A'}<br>
-                      <strong>Lower Limit:</strong> ${properties.lower_limit || 'N/A'}<br>
+                      <strong>Designation:</strong> ${properties.identification || 'N/A'}<br>
+                      <strong>Airspace Name:</strong> ${(properties.name || 'N/A').replace(/[\[\]]/g, '')}<br>
+                      <strong>FIR:</strong> ${properties.region || 'N/A'}<br>
+                      <strong>Type:</strong> ${properties.restrictive_type || 'N/A'}<br>
+                      <strong>Upper Limit:</strong> ${properties.upper_limits || 'N/A'}<br>
+                      <strong>Lower Limit:</strong> ${properties.lower_limits || 'N/A'}<br>
                       <strong>Remarks:</strong> ${properties.remarks || 'N/A'}<br>
                   `;
             }
@@ -1499,6 +1658,7 @@ export class MapComponent implements OnInit {
             .setLatLng(event.latlng)
             .setContent(popupContent)
             .openOn(this.map);
+            this.highlightFeature(data.features[0]);
         } else {
           console.log('No features found for restricted airspace');
         }
@@ -1539,8 +1699,16 @@ export class MapComponent implements OnInit {
             if (properties) {
               // Append the desired properties to the popup content
               popupContent += `
-                          <strong>Airspace Center:</strong> ${properties.AirspaceCenter || 'N/A'}<br>
-                          <strong>Controlled Airspace Name:</strong> ${properties.ControlledAirspaceName || 'N/A'}<br>
+                          <strong>Name:</strong> ${properties.name || 'N/A'}<br>
+                          <strong>Airspace Classification:</strong> ${properties.AirspaceClassification || 'N/A'}<br>
+                          <strong>Area:</strong> ${properties.area || 'N/A'}<br>
+                          <strong>Call Sign:</strong> ${properties.call_sign || 'N/A'}<br>
+                          <strong>Frequency:</strong> ${properties.frequency || 'N/A'}<br>
+                          <strong>Language:</strong> ${properties.language || 'N/A'}<br>
+                          <strong>Type:</strong> ${properties.type || 'N/A'}<br>
+                          <strong>Unit Process Service:</strong> ${properties.unit_process_service || 'N/A'}<br>
+                          <strong>Vertical Limits:</strong> ${properties.vertical_limits || 'N/A'}<br>
+                          <strong>Remark:</strong> ${properties.remarks?.trim() ? properties.remarks : 'N/A'}<br>
                       `;
             }
           });
@@ -1550,6 +1718,7 @@ export class MapComponent implements OnInit {
             .setLatLng(event.latlng)
             .setContent(popupContent)
             .openOn(this.map);
+            this.highlightFeature(data.features[0]);
         } else {
           console.log('No features found for controlled airspace');
         }
@@ -1677,114 +1846,117 @@ export class MapComponent implements OnInit {
       }
     }
   }
+
+  selectedClassifications: string[] = [];
+  selectedTypes: string[] = [];
+
   controlAirspaceFilter(event: Event) {
     event.preventDefault();
- 
+
     // Retrieve input values
     const nameInput = (document.getElementById('nameInput') as HTMLInputElement).value.trim();
-    const classificationInput = (document.getElementById('classificationInput') as HTMLSelectElement).value;
-    const typeInput = (document.getElementById('typeInput') as HTMLSelectElement).value;
     const upperLimitInput = (document.getElementById('upperLimitInput') as HTMLInputElement).value.trim();
     const lowerLimitInput = (document.getElementById('lowerLimitInput') as HTMLInputElement).value.trim();
- 
+
     let cqlFilter = '';
- 
-    // Apply filters only if specific options are selected (not "Select All")
+
+    // Apply filters
     if (nameInput) {
-        cqlFilter += `name ILIKE '%${nameInput}%'`;
+      cqlFilter += `name ILIKE '%${nameInput}%'`;
     }
-    if (classificationInput && classificationInput !== 'all') {
-        cqlFilter += (cqlFilter ? ' AND ' : '') + `AirspaceClassification ILIKE '%${classificationInput}%'`;
+
+    if (this.selectedClassifications.length > 0) {
+      const classFilters = this.selectedClassifications.map(c => `AirspaceClassification ILIKE '%${c}%'`).join(' OR ');
+      cqlFilter += (cqlFilter ? ' AND ' : '') + `(${classFilters})`;
     }
-    if (typeInput && typeInput !== 'all') {
-        cqlFilter += (cqlFilter ? ' AND ' : '') + `type ILIKE '%${typeInput}%'`;
+
+    if (this.selectedTypes.length > 0) {
+      const typeFilters = this.selectedTypes.map(t => `type ILIKE '%${t}%'`).join(' OR ');
+      cqlFilter += (cqlFilter ? ' AND ' : '') + `(${typeFilters})`;
     }
+
     if (upperLimitInput) {
-        cqlFilter += (cqlFilter ? ' AND ' : '') + `upper_limits ILIKE '%${upperLimitInput}%'`;
+      cqlFilter += (cqlFilter ? ' AND ' : '') + `upper_limits ILIKE '%${upperLimitInput}%'`;
     }
+
     if (lowerLimitInput) {
-        cqlFilter += (cqlFilter ? ' AND ' : '') + `lower_limits ILIKE '%${lowerLimitInput}%'`;
+      cqlFilter += (cqlFilter ? ' AND ' : '') + `lower_limits ILIKE '%${lowerLimitInput}%'`;
     }
- 
-    // Log CQL Filter and ensure layer removal
+
     console.log("Generated CQL Filter:", cqlFilter);
- 
-    // Remove existing layer before applying new filter
+
+    // Remove existing layer before applying a new filter
     if (this.controlairspaceLayer) {
-        this.map.removeLayer(this.controlairspaceLayer);
+      this.map.removeLayer(this.controlairspaceLayer);
     }
- 
+
     // Setup custom WMS parameters
     const customParams = {
-        layers: 'controlairspace',
-        format: 'image/png',
-        transparent: true,
-        CQL_FILTER: cqlFilter  // Apply the constructed CQL filter
+      layers: 'controlairspace',
+      format: 'image/png',
+      transparent: true,
+      CQL_FILTER: cqlFilter  // Apply the constructed CQL filter
     };
- 
+
     // Add filtered layer to the map
     this.controlairspaceLayer = L.tileLayer.wms(this.wmsUrl, customParams);
     this.airportLayerGroup.clearLayers();
     this.controlairspaceLayer.addTo(this.map).bringToFront();
-}
- 
- 
- 
-restrictedAreasFilter(event: Event) {
-  event.preventDefault();
- 
-  const nameInput = (document.getElementById('nameInput') as HTMLInputElement).value.trim();
-  const classificationInput = (document.getElementById('classificationInput') as HTMLSelectElement).value.trim();
-  const typeInput = (document.getElementById('typeInput') as HTMLSelectElement).value.trim();
-  const upperLimitInput = (document.getElementById('upperLimitInput') as HTMLInputElement).value.trim();
-  const lowerLimitInput = (document.getElementById('lowerLimitInput') as HTMLInputElement).value.trim();
- 
-  let cqlFilter = '';
- 
-  // **Handle Name Filter**
-  if (nameInput) cqlFilter += `name ILIKE '%${nameInput}%'`;
- 
-  // **Handle Classification (Airspace) Filter**
-  if (classificationInput && classificationInput !== 'all') {
-      cqlFilter += (cqlFilter ? ' AND ' : '') + `restrictive_type ILIKE '%${classificationInput}%'`;
   }
- 
-  // **Handle Region Filter**
-  if (typeInput && typeInput !== 'all') {
-      cqlFilter += (cqlFilter ? ' AND ' : '') + `region ILIKE '%${typeInput}%'`;
-  }
- 
-  // **Handle Upper & Lower Limits**
-  if (upperLimitInput) {
+
+
+
+  restrictedAreasFilter(event: Event) {
+    event.preventDefault();
+
+    const nameInput = (document.getElementById('nameInput') as HTMLInputElement).value.trim();
+    const upperLimitInput = (document.getElementById('upperLimitInput') as HTMLInputElement).value.trim();
+    const lowerLimitInput = (document.getElementById('lowerLimitInput') as HTMLInputElement).value.trim();
+
+    let cqlFilter = '';
+
+    // **Handle Name Filter**
+    if (nameInput) cqlFilter += `name ILIKE '%${nameInput}%'`;
+
+    // **Handle Multi-Select Airspace Classification**
+    if (this.selectedClassifications && this.selectedClassifications.length > 0 && !this.selectedClassifications.includes('all')) {
+      const classificationFilter = this.selectedClassifications.map(cls => `restrictive_type ILIKE '%${cls}%'`).join(' OR ');
+      cqlFilter += (cqlFilter ? ' AND (' : '(') + classificationFilter + ')';
+    }
+
+    // **Handle Multi-Select Region**
+    if (this.selectedTypes && this.selectedTypes.length > 0 && !this.selectedTypes.includes('all')) {
+      const regionFilter = this.selectedTypes.map(region => `region ILIKE '%${region}%'`).join(' OR ');
+      cqlFilter += (cqlFilter ? ' AND (' : '(') + regionFilter + ')';
+    }
+
+    // **Handle Upper & Lower Limits**
+    if (upperLimitInput) {
       cqlFilter += (cqlFilter ? ' AND ' : '') + `upper_limits = 'FL ${upperLimitInput}'`;
-  }
-  if (lowerLimitInput) {
+    }
+    if (lowerLimitInput) {
       cqlFilter += (cqlFilter ? ' AND ' : '') + `lower_limits = 'FL ${lowerLimitInput}'`;
-  }
- 
-  // **If "Select All" is chosen, remove filter condition**
-  if (classificationInput === 'all') {
-      cqlFilter = cqlFilter.replace(/restrictive_type ILIKE '.*?'/, '');
-  }
- 
-  console.log("CQL Filter:", cqlFilter); // Debugging log
- 
-  // **Update WMS Layer**
-  if (this.restricted_areasLayer) {
+    }
+
+    console.log("CQL Filter:", cqlFilter); // Debugging log
+
+    // **Update WMS Layer**
+    if (this.restricted_areasLayer) {
       this.map.removeLayer(this.restricted_areasLayer);
-  }
- 
-  const customParams = {
+    }
+
+    const customParams = {
       layers: 'restricted_areas',
       format: 'image/png',
       transparent: true,
       CQL_FILTER: cqlFilter
-  };
- 
-  this.restricted_areasLayer = L.tileLayer.wms(this.wmsUrl, customParams);
-  this.airportLayerGroup.clearLayers();
-  this.restricted_areasLayer.addTo(this.map).bringToFront();
-}
+    };
+
+    this.restricted_areasLayer = L.tileLayer.wms(this.wmsUrl, customParams);
+    this.airportLayerGroup.clearLayers();
+    this.restricted_areasLayer.addTo(this.map).bringToFront();
+  }
+
 
   toggleFilterPopup() {
     this.filterPopupVisible = !this.filterPopupVisible;
@@ -1797,10 +1969,66 @@ restrictedAreasFilter(event: Event) {
     this.filterPopupVisible = false; // Close the popup
   }
 
+  // loadLayer(event: Event, layerName: string, layerVar: string) {
+  //   this.stopPropagation(event);
+
+  //   // Check if the layer already exists, if not, create it
+  //   if (!(this as any)[layerVar]) {
+  //     // Create the layer
+  //     (this as any)[layerVar] = L.tileLayer.wms(this.wmsUrl, {
+  //       layers: layerName,
+  //       format: 'image/png',
+  //       transparent: true,
+  //     });
+
+  //     // Clear the airport layer group and add the new layer
+  //     this.airportLayerGroup.clearLayers();
+  //     (this as any)[layerVar].addTo(this.map).bringToFront();
+
+  //     // Open the filter popup and set the active layer
+  //     this.filterPopupVisible = true;
+  //     this.activeLayer = layerName as 'convlinedata' | 'nonconvlinedata';
+  //     console.log(`${layerName} layer added to the map`);
+
+  //     // Add click event based on the layer type
+  //     this.map.on('click', (e: L.LeafletMouseEvent) => {
+  //       this.handleLayerClick(layerName, e);
+  //       // this.getAirportDetailsFeatureInfo(e);
+  //     });
+
+  //     // Add mousemove event to show GetFeatureInfo cursor
+  //     this.map.on('mousemove', (e: L.LeafletMouseEvent) => {
+  //       this.onMouseMove(e);
+  //     });
+
+  //   } else {
+  //     // Toggle the layer: remove it if it exists, add it if it's removed
+  //     if (this.map.hasLayer((this as any)[layerVar])) {
+  //       this.map.removeLayer((this as any)[layerVar]);
+  //       this.map.off('click');
+  //       this.map.off('mousemove');  // Remove mousemove event when layer is removed
+  //       this.filterPopupVisible = false;
+  //       this.activeLayer = null;  // Clear active layer
+  //       console.log(`${layerName} layer removed from the map`);
+
+  //     } else {
+  //       // If the layer was removed, add it back to the map
+  //       (this as any)[layerVar].addTo(this.map).bringToFront();
+  //       this.filterPopupVisible = true; 
+  //       this.activeLayer = layerName as 'convlinedata' | 'nonconvlinedata';
+  //       console.log(`${layerName} layer brought to the front`);
+
+  //       // Reattach mousemove event when the layer is added again
+  //       this.map.on('mousemove', (e: L.LeafletMouseEvent) => {
+  //         this.onMouseMove(e);
+  //       });
+  //     }
+  //   }
+  // }
+
   loadLayer(event: Event, layerName: string, layerVar: string) {
     this.stopPropagation(event);
-
-    // Check if the layer already exists, if not, create it
+   
     if (!(this as any)[layerVar]) {
       // Create the layer
       (this as any)[layerVar] = L.tileLayer.wms(this.wmsUrl, {
@@ -1808,42 +2036,75 @@ restrictedAreasFilter(event: Event) {
         format: 'image/png',
         transparent: true,
       });
-
+   
       // Clear the airport layer group and add the new layer
       this.airportLayerGroup.clearLayers();
       (this as any)[layerVar].addTo(this.map).bringToFront();
-
+   
+      // Show filter popup and set active layers
+      this.filterPopupVisible = true;
+      this.activeLayers.push(layerName);  // Add to active layers
+      console.log(`${layerName} layer added to the map`);
+   
       // Open the filter popup and set the active layer
       this.filterPopupVisible = true;
       this.activeLayer = layerName as 'convlinedata' | 'nonconvlinedata';
-      console.log(`${layerName} layer added to the map`);
-
-      // Add click event based on the layer type
-      this.map.on('click', (e: L.LeafletMouseEvent) => {
-        this.handleLayerClick(layerName, e);
-        // Fetch and print airport data when clicking on the map after loading the layer
-        this.getAirportDetailsFeatureInfo(e);
-      });
-
+   
+      // Add click and mousemove events
+      const clickHandler = (e: L.LeafletMouseEvent) => this.handleLayerClick(layerName, e);
+      this.layerEventListeners[layerName] = clickHandler;
+      this.map.on('click', clickHandler);
+   
+      if (this.activeLayers.length === 1) {
+        this.map.on('mousemove', (e: L.LeafletMouseEvent) => this.onMouseMove(e));  // Attach mousemove if first layer
+      }
+   
     } else {
-      // Toggle the layer: remove it if it exists, add it if it's removed
       if (this.map.hasLayer((this as any)[layerVar])) {
-        // Remove the layer and close the filter popup
+        // Remove the layer
         this.map.removeLayer((this as any)[layerVar]);
-        this.map.off('click'); // Remove all click events for this layer
-        this.filterPopupVisible = false; // Close the filter popup
-        this.activeLayer = null; // Reset active layer
+        this.activeLayers = this.activeLayers.filter(layer => layer !== layerName);  // Remove from active layers
         console.log(`${layerName} layer removed from the map`);
+   
+        // Remove highlight if it exists
+        if (this.highlightLayer) {
+          this.map.removeLayer(this.highlightLayer);
+          this.highlightLayer = null;
+        }
+   
+        // Close any open popups
+        this.map.closePopup();
+   
+        // Remove click event listener specific to the layer
+        if (this.layerEventListeners[layerName]) {
+          this.map.off('click', this.layerEventListeners[layerName]);
+          delete this.layerEventListeners[layerName];
+        }
+   
+        if (this.activeLayers.length === 0) {
+          this.map.off('mousemove');  // Remove mousemove only if no active layers
+          this.filterPopupVisible = false;
+        }
+   
       } else {
-        // If the layer was removed, add it back to the map and open the filter popup
+        // Re-add the layer
         (this as any)[layerVar].addTo(this.map).bringToFront();
-        this.filterPopupVisible = true; // Open the filter popup
-        this.activeLayer = layerName as 'convlinedata' | 'nonconvlinedata';
+        if (!this.activeLayers.includes(layerName)) {
+          this.activeLayers.push(layerName);  // Add back to active layers
+        }
         console.log(`${layerName} layer brought to the front`);
+   
+        // Add click event back for the re-added layer
+        const clickHandler = (e: L.LeafletMouseEvent) => this.handleLayerClick(layerName, e);
+        this.layerEventListeners[layerName] = clickHandler;
+        this.map.on('click', clickHandler);
+   
+        if (this.activeLayers.length === 1) {
+          this.map.on('mousemove', (e: L.LeafletMouseEvent) => this.onMouseMove(e));  // Attach if this is the first active layer
+        }
       }
     }
   }
-
 
   applyNonConvFilter(event: Event) {
     event.preventDefault();  // Prevent form submission from reloading the page
@@ -1914,16 +2175,38 @@ restrictedAreasFilter(event: Event) {
     }
   }
 
+  highlightFeature(feature: any) {
+    // Remove the previous highlight if it exists
+    if (this.highlightLayer) {
+      this.map.removeLayer(this.highlightLayer);
+    }
+
+    // Add the new highlight
+    this.highlightLayer = L.geoJSON(feature, {
+      style: {
+        color: 'red',  // Change the clicked line to red
+        weight: 3.5,
+        opacity: 1
+      }
+    }).addTo(this.map);
+  }
+
+
+  highlightLayer: L.Layer | null = null;
 
   handleLayerClick(layerName: string, event: L.LeafletMouseEvent) {
     switch (layerName) {
       case 'convlinedata':
         this.getFeatureInfo(event);
+
         break;
       case 'nonconvlinedata':
         this.getNonConvFeatureInfo(event);
         break;
-      case 'FIR':
+      case 'India_DEM':
+        this.getDEMFeatureInfo(event);
+        break;
+      case 'India_FIR':
         this.getFIRFeatureInfo(event);
         break;
       case 'significantpoints':
